@@ -24,21 +24,20 @@ services:
     <<: *opr
     ipc: shareable
     # devices: ["/dev/video0:/dev/video0"]   # with DEVICE=/dev/video0
-    command: >
-      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=camera
-      device:=${DEVICE:-sim://swarm?pace_hz=30&loop=1&stamps=clock}
+    # A list, not a string: Compose splits string commands like a shell, and the '&' in a sim://
+    # device would cut it short.
+    command: ["ros2", "launch", "opr_pipeline", "pipeline.launch.py", "mode:=split", "role:=camera",
+              "device:=${DEVICE:-sim://swarm?pace_hz=30&loop=1&stamps=clock}"]
 
   detector:
     <<: *opr
     ipc: "service:camera"
     depends_on: [camera]
-    command: >
-      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=detector
-      detector_zero_copy:=true
+    command: ["ros2", "launch", "opr_pipeline", "pipeline.launch.py", "mode:=split", "role:=detector",
+              "detector_zero_copy:=true"]
 
   tracking:
     <<: *opr
     volumes: ["${OUT_DIR:-./out}:/out"]
-    command: >
-      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=tracking
-      record_path:=/out/telemetry.hex
+    command: ["ros2", "launch", "opr_pipeline", "pipeline.launch.py", "mode:=split", "role:=tracking",
+              "record_path:=/out/telemetry.hex"]

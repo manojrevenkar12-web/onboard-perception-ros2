@@ -67,7 +67,7 @@ are kept. Every test below compares bytes, not tolerances:
 | What runs | Datagrams equal to visionbox 2.3 |
 |---|---:|
 | `opr_core` (the extracted library), 21 flights | **3,150 / 3,150** |
-| The same, compiled for arm64 and run under emulation in CI | **3,150 / 3,150** |
+| The same, compiled for arm64 and run under emulation in CI | **3,150 / 3,150** (after the fix below) |
 | All ROS 2 nodes in one process, intra-process (occlusion flight) | **150 / 150** |
 | Split into three processes; the detector reads shared memory in place (clutter flight) | **150 / 150** |
 
@@ -75,6 +75,11 @@ The split test first lost its first datagram: the camera started before the dete
 other process had been discovered. In the field a lifecycle manager activates the camera after
 everything downstream has subscribed. The tests now do the same, and the [ADR](docs/adr/0005-lifecycle-and-composition.md)
 records why.
+
+The arm64 check earned its place on its first run. It failed, and the cause was not floating point:
+the simulator drew two random numbers inside one function call's arguments. C++ leaves argument
+evaluation order unspecified, and GCC orders them differently on x86 and aarch64, so the two
+machines flew different flights. Details are in [ADR 0006](docs/adr/0006-bit-exact-floating-point.md).
 
 ### Moving a 1080p frame between processes
 
@@ -158,12 +163,12 @@ a reader deliberately outstays its lease on every 7th frame. In a typical run:
 
 Full table: [reports/tracking.md](reports/tracking.md). Across all flights:
 
-- **Recall 97.5%.** The misses are mostly the two frames every target needs before it is
+- **Recall 97.6%.** The misses are mostly the two frames every target needs before it is
   confirmed.
 - **Position error.** 0.06 px mean and 0.12 px p95.
-- **ID switches.** 20 across all flights: 17 in the 8-target swarm, and 3 in the occlusion
-  flights, where an 8-frame occlusion is longer than the tracker's patience.
-- **Ghost tracks (292 of 8,725 track-frames).** These come from two sources:
+- **ID switches.** 19 across all flights: 9 in the exposure-ramp flights, 7 in the 8-target swarm,
+  and 3 in the occlusion flights, where an 8-frame occlusion is longer than the tracker's patience.
+- **Ghost tracks (294 of 8,710 track-frames).** These come from two sources:
   - targets that overlap and briefly merge into one blob;
   - tracks that coast after their target has left the image.
 

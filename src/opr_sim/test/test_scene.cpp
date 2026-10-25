@@ -108,5 +108,5 @@ TEST(Scene, FingerprintIsStableAcrossMachines) {
   Scene s("swarm", 2026);
   Frame f;
   s.render(75, f);
-  EXPECT_EQ(fnv1a(f.yuyv), 12158775183569628218ULL);
+  EXPECT_EQ(fnv1a(f.yuyv), 5537529423413159159ULL);
 }

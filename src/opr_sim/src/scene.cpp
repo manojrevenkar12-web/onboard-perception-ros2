@@ -88,47 +88,57 @@ Scene::Scene(const std::string& scenario, std::uint64_t seed, Calibration calib)
     start_.push_back(t);
   };
   // Positions are jittered by the seed so each seed is a different flight of the same kind.
-  auto jitter = [&](double span) { return (rng.unit() - 0.5) * span; };
+  // The draws happen in separate statements, x then y then vx then vy: C++ does not specify the
+  // order in which a call's arguments are evaluated, and GCC on x86 and on aarch64 pick different
+  // orders. Two draws in one argument list once gave the two machines different flights.
+  auto jitter = [&](double span) { return span == 0.0 ? 0.0 : (rng.unit() - 0.5) * span; };
+  auto place = [&](double x, double x_span, double y, double y_span, double vx, double vx_span, double vy,
+                   double vy_span, double radius, int contrast) {
+    const double jx = jitter(x_span);
+    const double jy = jitter(y_span);
+    const double jvx = jitter(vx_span);
+    const double jvy = jitter(vy_span);
+    add(x + jx, y + jy, vx + jvx, vy + jvy, radius, contrast);
+  };
 
   if (scenario == "crossing") {
     frame_count_ = 150;
-    add(0.2 * w + jitter(20), 0.45 * h + jitter(20), 120.0, 18.0, 6.0, 90);
-    add(0.8 * w + jitter(20), 0.55 * h + jitter(20), -120.0, -18.0, 6.5, 85);
+    place(0.2 * w, 20, 0.45 * h, 20, 120.0, 0, 18.0, 0, 6.0, 90);
+    place(0.8 * w, 20, 0.55 * h, 20, -120.0, 0, -18.0, 0, 6.5, 85);
   } else if (scenario == "fast") {
     frame_count_ = 120;
-    add(0.1 * w + jitter(10), 0.3 * h + jitter(30), 420.0, 95.0, 7.0, 100);
-    add(0.5 * w + jitter(40), 0.8 * h + jitter(20), -60.0, -40.0, 6.0, 80);
+    place(0.1 * w, 10, 0.3 * h, 30, 420.0, 0, 95.0, 0, 7.0, 100);
+    place(0.5 * w, 40, 0.8 * h, 20, -60.0, 0, -40.0, 0, 6.0, 80);
   } else if (scenario == "clutter") {
     frame_count_ = 150;
     flashes_per_frame_ = 3;
     sensor_noise_ = 6;
-    add(0.3 * w + jitter(40), 0.3 * h + jitter(40), 50.0, 30.0, 6.0, 85);
-    add(0.6 * w + jitter(40), 0.6 * h + jitter(40), -40.0, 25.0, 6.0, 85);
-    add(0.5 * w + jitter(40), 0.2 * h + jitter(30), 10.0, 60.0, 7.0, 95);
+    place(0.3 * w, 40, 0.3 * h, 40, 50.0, 0, 30.0, 0, 6.0, 85);
+    place(0.6 * w, 40, 0.6 * h, 40, -40.0, 0, 25.0, 0, 6.0, 85);
+    place(0.5 * w, 40, 0.2 * h, 30, 10.0, 0, 60.0, 0, 7.0, 95);
   } else if (scenario == "exposure") {
     frame_count_ = 150;
     exposure_ramp_ = true;
-    add(0.25 * w + jitter(30), 0.5 * h + jitter(30), 60.0, -10.0, 6.0, 95);
-    add(0.6 * w + jitter(30), 0.35 * h + jitter(30), -30.0, 45.0, 6.0, 90);
-    add(0.7 * w + jitter(30), 0.75 * h + jitter(20), -50.0, -25.0, 7.0, 100);
+    place(0.25 * w, 30, 0.5 * h, 30, 60.0, 0, -10.0, 0, 6.0, 95);
+    place(0.6 * w, 30, 0.35 * h, 30, -30.0, 0, 45.0, 0, 6.0, 90);
+    place(0.7 * w, 30, 0.75 * h, 20, -50.0, 0, -25.0, 0, 7.0, 100);
   } else if (scenario == "occlusion") {
     frame_count_ = 150;
-    add(0.2 * w + jitter(20), 0.4 * h + jitter(20), 80.0, 10.0, 6.0, 90);
-    add(0.7 * w + jitter(20), 0.6 * h + jitter(20), -60.0, -20.0, 6.0, 90);
+    place(0.2 * w, 20, 0.4 * h, 20, 80.0, 0, 10.0, 0, 6.0, 90);
+    place(0.7 * w, 20, 0.6 * h, 20, -60.0, 0, -20.0, 0, 6.0, 90);
     occlusions_.push_back({1, 40, 47});  // longer than the tracker's patience: a new identity
     occlusions_.push_back({2, 70, 72});  // short: the track coasts and keeps its identity
   } else if (scenario == "swarm") {
     frame_count_ = 150;
     for (int i = 0; i < 8; ++i) {
-      const double x = (0.15 + 0.1 * i) * w + jitter(10);
-      const double y = (i % 2 == 0 ? 0.3 : 0.7) * h + jitter(30);
-      add(x, y, 25.0 + jitter(40), (i % 2 == 0 ? 30.0 : -30.0) + jitter(20), 5.5, 85);
+      place((0.15 + 0.1 * i) * w, 10, (i % 2 == 0 ? 0.3 : 0.7) * h, 30, 25.0, 40, i % 2 == 0 ? 30.0 : -30.0, 20,
+            5.5, 85);
     }
   } else if (scenario == "edge") {
     frame_count_ = 120;
-    add(0.85 * w + jitter(10), 0.5 * h + jitter(20), 140.0, 0.0, 6.0, 90);
-    add(0.5 * w + jitter(30), 0.08 * h, 0.0, -50.0, 6.0, 90);
-    add(0.4 * w + jitter(30), 0.6 * h + jitter(30), 20.0, 20.0, 6.0, 90);
+    place(0.85 * w, 10, 0.5 * h, 20, 140.0, 0, 0.0, 0, 6.0, 90);
+    place(0.5 * w, 30, 0.08 * h, 0, 0.0, 0, -50.0, 0, 6.0, 90);
+    place(0.4 * w, 30, 0.6 * h, 30, 20.0, 0, 20.0, 0, 6.0, 90);
   } else {
     throw std::invalid_argument("unknown scenario: " + scenario);
   }

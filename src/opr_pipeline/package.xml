@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>opr_pipeline</name>
+  <version>0.1.0</version>
+  <description>ROS 2 components of the onboard perception chain: camera, rectify, detector, tracker, telemetry bridge, health.</description>
+  <maintainer email="manojrevenkar70@gmail.com">Manoj Kumar Prakash</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>image_transport</depend>
+  <depend>opr_msgs</depend>
+  <depend>opr_core</depend>
+  <depend>opr_v4l2</depend>
+  <depend>opr_shm</depend>
+  <depend>opr_shm_transport</depend>
+  <exec_depend>launch_ros</exec_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>launch_testing_ros</test_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -157,24 +157,47 @@ Status Camera::open() {
     if (addr == MAP_FAILED || addr == nullptr) return fail(Status::kError, "mmap");
     maps_[i] = {addr, b.length};
   }
-  for (std::uint32_t i = 0; i < req.count; ++i) {
+  return start_streaming();
+}
+
+Status Camera::start_streaming() {
+  if (fd_ < 0) {
+    errno = 0;
+    error_ = "not open";
+    return Status::kError;
+  }
+  if (streaming_) return Status::kOk;
+  for (std::size_t i = 0; i < maps_.size(); ++i) {
     v4l2_buffer b{};
     b.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     b.memory = V4L2_MEMORY_MMAP;
-    b.index = i;
-    if (sys_->ioctl(fd_, VIDIOC_QBUF, &b) < 0) return fail(Status::kError, "VIDIOC_QBUF");
+    b.index = static_cast<std::uint32_t>(i);
+    if (sys_->ioctl(fd_, VIDIOC_QBUF, &b) < 0) return fail(gone(errno) ? Status::kDisconnected : Status::kError, "VIDIOC_QBUF");
   }
-  queued_ = static_cast<int>(req.count);
+  queued_ = static_cast<int>(maps_.size());
   int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  if (sys_->ioctl(fd_, VIDIOC_STREAMON, &type) < 0) return fail(Status::kError, "VIDIOC_STREAMON");
+  if (sys_->ioctl(fd_, VIDIOC_STREAMON, &type) < 0) {
+    return fail(gone(errno) ? Status::kDisconnected : Status::kError, "VIDIOC_STREAMON");
+  }
+  streaming_ = true;
   have_last_sequence_ = false;
   return Status::kOk;
+}
+
+void Camera::stop_streaming() {
+  if (fd_ < 0 || !streaming_) return;
+  int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  sys_->ioctl(fd_, VIDIOC_STREAMOFF, &type);  // returns every buffer to us, queued or filled
+  streaming_ = false;
+  queued_ = 0;
+  ++generation_;  // a Buffer from the old stream must not be queued into the next one
 }
 
 void Camera::close() {
   if (fd_ < 0) return;
   int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   sys_->ioctl(fd_, VIDIOC_STREAMOFF, &type);  // may fail on a vanished device; nothing to do then
+  streaming_ = false;
   for (auto& m : maps_) {
     if (m.addr != nullptr) sys_->munmap(m.addr, m.length);
   }
@@ -191,7 +214,7 @@ void Camera::close() {
 }
 
 void Camera::requeue(int index, std::uint64_t generation) {
-  if (fd_ < 0 || generation != generation_) return;
+  if (fd_ < 0 || !streaming_ || generation != generation_) return;
   v4l2_buffer b{};
   b.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   b.memory = V4L2_MEMORY_MMAP;
@@ -201,9 +224,9 @@ void Camera::requeue(int index, std::uint64_t generation) {
 
 Status Camera::grab(int timeout_ms, Buffer& out) {
   out.release();
-  if (fd_ < 0) {
+  if (fd_ < 0 || !streaming_) {
     errno = 0;
-    error_ = "not open";
+    error_ = fd_ < 0 ? "not open" : "not streaming";
     return Status::kError;
   }
   for (;;) {

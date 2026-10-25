@@ -1,0 +1,26 @@
+# Generated from src/legacy_visionbox/visionbox.ini by tools/ini_to_params.py; do not edit by hand.
+# tests/test_tools.py fails if the two disagree.
+/**:
+  ros__parameters:
+    width: 640
+    height: 480
+    fx: 520.0
+    fy: 520.0
+    cx: 319.5
+    cy: 239.5
+    k1: -0.28
+    k2: 0.09
+    p1: 0.0006
+    p2: -0.0004
+    k3: -0.012
+    bg_radius: 8
+    threshold: 18
+    min_area: 4
+    max_area: 400
+    gate: 13.8
+    accel_noise: 2000.0
+    meas_noise: 1.0
+    init_pos_var: 4.0
+    init_vel_var: 90000.0
+    confirm_hits: 3
+    max_misses: 5

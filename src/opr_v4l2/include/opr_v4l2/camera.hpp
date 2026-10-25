@@ -88,6 +88,13 @@ class Camera {
 
   /// Opens and starts streaming. On failure returns kError or kDisconnected and `error()` says why.
   Status open();
+  /// Stops capture but keeps the device open and its buffers mapped (a paused sensor delivers no
+  /// stale frames when it resumes). Outstanding Buffers become inert.
+  void stop_streaming();
+  /// Queues every buffer and starts capture again after stop_streaming().
+  Status start_streaming();
+  bool streaming() const { return streaming_; }
+
   /// Stops streaming and unmaps buffers. Outstanding Buffers become inert (they will not requeue
   /// into a closed device). Safe to call twice.
   void close();
@@ -123,6 +130,7 @@ class Camera {
   std::uint32_t last_sequence_ = 0;
   std::uint64_t interval_ns_ = 0;
   int queued_ = 0;
+  bool streaming_ = false;
   Stats stats_;
   std::string error_;
 };

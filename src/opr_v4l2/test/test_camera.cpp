@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <time.h>
+
 #include <chrono>
 #include <cstring>
 #include <thread>
@@ -186,4 +188,28 @@ TEST(SimUrl, ParsesOptionsAndRejectsTypos) {
   EXPECT_THROW(opr::v4l2::parse_sim_url("sim://clutter?stamps=gps"), std::invalid_argument);
   EXPECT_THROW(opr::v4l2::parse_sim_url("/dev/video0"), std::invalid_argument);
   EXPECT_THROW(opr::v4l2::FakeDevice(opr::v4l2::parse_sim_url("sim://hover")), std::invalid_argument);
+}
+
+TEST(Camera, APausedStreamDeliversNoStaleFrames) {
+  // Paced sensor: while the stream is stopped nothing is captured, so the first frame after
+  // start_streaming() is fresh and no drops are counted for the pause.
+  auto dev = fake("sim://fast?pace_hz=100&loop=1&stamps=clock");
+  Camera cam(cfg("x"), dev);
+  ASSERT_EQ(cam.open(), Status::kOk);
+  Buffer held;
+  ASSERT_EQ(cam.grab(100, held), Status::kOk);
+  cam.stop_streaming();
+  EXPECT_FALSE(cam.streaming());
+  Buffer b;
+  EXPECT_EQ(cam.grab(10, b), Status::kError) << "grab while paused";
+  held.release();  // must not requeue into the stopped stream
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  timespec ts{};
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  const std::uint64_t resumed = static_cast<std::uint64_t>(ts.tv_sec) * 1000000000ULL + ts.tv_nsec;
+  ASSERT_EQ(cam.start_streaming(), Status::kOk);
+  ASSERT_EQ(cam.grab(100, b), Status::kOk);
+  EXPECT_GE(b.stamp_ns(), resumed) << "first frame after resume was exposed before it";
+  EXPECT_EQ(b.sequence(), 0u);
+  EXPECT_EQ(cam.stats().dropped, 0u);
 }

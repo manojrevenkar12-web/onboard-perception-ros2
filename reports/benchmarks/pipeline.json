@@ -1,0 +1,122 @@
+{
+  "machine": {
+    "cpus": 2,
+    "cpu_model": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "seconds_per_run": 20.0,
+    "device": "sim://swarm?pace_hz=30&loop=1&stamps=clock"
+  },
+  "results": [
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 3.881038,
+      "latency_ms_p99": 5.916645,
+      "latency_ms_max": 8.781137,
+      "cpu_s": 5.079999999999999,
+      "cpu_ms_per_frame": 8.452579034941762,
+      "processes": 2,
+      "deployment": "composed",
+      "description": "one process, intra-process",
+      "limit": "none"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.194112,
+      "latency_ms_p99": 7.296912,
+      "latency_ms_max": 16.262803,
+      "cpu_s": 4.78,
+      "cpu_ms_per_frame": 7.953410981697171,
+      "processes": 4,
+      "deployment": "split_raw",
+      "description": "3 processes, raw images",
+      "limit": "none"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.075761,
+      "latency_ms_p99": 9.360014,
+      "latency_ms_max": 18.152117,
+      "cpu_s": 4.680000000000001,
+      "cpu_ms_per_frame": 7.787021630615642,
+      "processes": 4,
+      "deployment": "split_shm",
+      "description": "3 processes, shm + copy",
+      "limit": "none"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.207899,
+      "latency_ms_p99": 8.890997,
+      "latency_ms_max": 13.022388,
+      "cpu_s": 4.71,
+      "cpu_ms_per_frame": 7.8369384359401,
+      "processes": 4,
+      "deployment": "split_zero_copy",
+      "description": "3 processes, shm in place",
+      "limit": "none"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 6.222357,
+      "latency_ms_p99": 12.300665,
+      "latency_ms_max": 29.636644,
+      "cpu_s": 6.119999999999999,
+      "cpu_ms_per_frame": 10.183028286189682,
+      "processes": 2,
+      "deployment": "composed",
+      "description": "one process, intra-process",
+      "limit": "one core"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.697312,
+      "latency_ms_p99": 9.220337,
+      "latency_ms_max": 12.236693,
+      "cpu_s": 4.8,
+      "cpu_ms_per_frame": 7.9866888519134775,
+      "processes": 4,
+      "deployment": "split_raw",
+      "description": "3 processes, raw images",
+      "limit": "one core"
+    },
+    {
+      "camera_frames": 600,
+      "frame_info_received": 600,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.426307,
+      "latency_ms_p99": 9.494892,
+      "latency_ms_max": 10.779959,
+      "cpu_s": 4.569999999999999,
+      "cpu_ms_per_frame": 7.603993344425955,
+      "processes": 4,
+      "deployment": "split_shm",
+      "description": "3 processes, shm + copy",
+      "limit": "one core"
+    },
+    {
+      "camera_frames": 602,
+      "frame_info_received": 602,
+      "tracked_frames": 601,
+      "latency_ms_p50": 4.121834,
+      "latency_ms_p99": 9.335426,
+      "latency_ms_max": 14.172566,
+      "cpu_s": 4.489999999999999,
+      "cpu_ms_per_frame": 7.470881863560731,
+      "processes": 4,
+      "deployment": "split_zero_copy",
+      "description": "3 processes, shm in place",
+      "limit": "one core"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+<library path="opr_shm_transport_plugins">
+  <class name="image_transport/shm_pub" type="opr::shm_transport::ShmPublisher" base_class_type="image_transport::PublisherPlugin">
+    <description>Images in leased POSIX shared-memory slots; only a small handle goes through the middleware.</description>
+  </class>
+  <class name="image_transport/shm_sub" type="opr::shm_transport::ShmSubscriber" base_class_type="image_transport::SubscriberPlugin">
+    <description>Reads leased shared-memory images; falls back to raw when the segment is not visible.</description>
+  </class>
+</library>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>opr_v4l2</name>
+  <version>0.1.0</version>
+  <description>V4L2 memory-mapped capture driver, plus a simulated device for tests and bench runs.</description>
+  <maintainer email="manojrevenkar70@gmail.com">Manoj Kumar Prakash</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>opr_sim</depend>
+  <test_depend>gtest</test_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

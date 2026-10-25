@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>opr_sim</name>
+  <version>0.1.0</version>
+  <description>Deterministic camera simulator with ground truth: the recorded flights every test replays.</description>
+  <maintainer email="manojrevenkar70@gmail.com">Manoj Kumar Prakash</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

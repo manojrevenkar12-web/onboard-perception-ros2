@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>opr_bench</name>
+  <version>0.1.0</version>
+  <description>Benchmarks: image transports between processes and the whole pipeline under CPU limits.</description>
+  <maintainer email="manojrevenkar70@gmail.com">Manoj Kumar Prakash</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>image_transport</depend>
+  <depend>opr_msgs</depend>
+  <depend>opr_shm</depend>
+  <depend>opr_shm_transport</depend>
+  <exec_depend>opr_pipeline</exec_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

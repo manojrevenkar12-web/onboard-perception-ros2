@@ -1,0 +1,119 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build and test (ROS 2 Jazzy, amd64)
+    runs-on: ubuntu-24.04
+    container: ros:jazzy-ros-base
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          apt-get update
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths src --ignore-src -y --rosdistro jazzy
+          apt-get install -y --no-install-recommends python3-pytest
+      - name: Build
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --event-handlers console_cohesion+ \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-Werror"
+      - name: Test (unit, ROS 2 integration, launch drills)
+        run: |
+          source install/setup.bash
+          colcon test --event-handlers console_cohesion+ --return-code-on-test-failure
+      - name: Test results
+        if: always()
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test-result --verbose
+      - name: Repository checks
+        run: python3 -m pytest -q tests/
+      - name: Legacy goldens are visionbox's own output
+        run: |
+          source install/setup.bash
+          out=$(mktemp -d)
+          for s in crossing fast clutter exposure occlusion swarm edge; do
+            for seed in 1 2 3; do
+              install/legacy_visionbox/lib/legacy_visionbox/visionbox \
+                --config src/legacy_visionbox/visionbox.ini --replay "$s:$seed" --record "$out/${s}_${seed}.hex"
+            done
+          done
+          diff -r "$out" src/opr_core/test/golden
+      - name: Tracking report is current
+        run: |
+          source install/setup.bash
+          install/opr_core/lib/opr_core/opr_evaluate reports/tracking.json.new
+          python3 - <<'PY'
+          import json
+          new = json.load(open("reports/tracking.json.new"))
+          old = json.load(open("reports/tracking.json"))
+          assert new == old, "reports/tracking.json is stale: rerun opr_evaluate"
+          PY
+
+  arm64-bit-exact:
+    name: same bits on arm64 (Jetson)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Core and equivalence tests under arm64 emulation
+        run: |
+          docker run --rm --platform linux/arm64 -v "$PWD:/src" -w /src ubuntu:24.04 bash -euo pipefail -c '
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends g++ cmake ninja-build libgtest-dev >/dev/null
+            uname -m
+            cmake -S src/opr_sim -B /b/sim -G Ninja >/dev/null && cmake --build /b/sim >/dev/null
+            cmake --install /b/sim --prefix /p >/dev/null
+            /b/sim/test_scene
+            cmake -S src/opr_core -B /b/core -G Ninja -DCMAKE_PREFIX_PATH=/p >/dev/null && cmake --build /b/core >/dev/null
+            /b/core/test_equivalence --gtest_brief=1
+          '
+
+  containers:
+    name: three containers, shared memory and fallback
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -f docker/Dockerfile -t onboard-perception-ros2:latest .
+      - name: Shared IPC - detector reads frames in place
+        run: |
+          mkdir -p out && chmod 777 out
+          export OUT_DIR="$PWD/out"
+          docker compose -f docker/compose.yaml up -d
+          sleep 40
+          docker compose -f docker/compose.yaml logs detector > detector.log
+          docker compose -f docker/compose.yaml down
+          cat detector.log
+          grep -q "reading image_rect in place" detector.log
+          ! grep -q "falling back" detector.log
+          lines=$(wc -l < out/telemetry.hex)
+          echo "telemetry datagrams: $lines"
+          test "$lines" -gt 300
+      - name: Isolated IPC - detector falls back to raw by itself
+        run: |
+          rm -f out/telemetry.hex
+          export OUT_DIR="$PWD/out"
+          docker compose -f docker/compose.yaml -f docker/compose.isolated.yaml up -d
+          sleep 40
+          docker compose -f docker/compose.yaml logs detector > detector.log
+          docker compose -f docker/compose.yaml down
+          cat detector.log
+          grep -q "falling back to raw" detector.log
+          lines=$(wc -l < out/telemetry.hex)
+          echo "telemetry datagrams: $lines"
+          test "$lines" -gt 300

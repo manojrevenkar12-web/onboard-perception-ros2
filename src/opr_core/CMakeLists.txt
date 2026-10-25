@@ -28,9 +28,11 @@ set_target_properties(opr_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(opr_sim REQUIRED)
 add_executable(opr_replay tools/replay.cpp)
 target_link_libraries(opr_replay opr_core opr::opr_sim)
+add_executable(opr_evaluate tools/evaluate.cpp)
+target_link_libraries(opr_evaluate opr_core opr::opr_sim)
 
 install(TARGETS opr_core EXPORT opr_coreTargets ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
-install(TARGETS opr_replay RUNTIME DESTINATION lib/opr_core)
+install(TARGETS opr_replay opr_evaluate RUNTIME DESTINATION lib/opr_core)
 install(DIRECTORY include/ DESTINATION include)
 install(EXPORT opr_coreTargets NAMESPACE opr:: DESTINATION share/opr_core/cmake)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/opr_coreConfig.cmake

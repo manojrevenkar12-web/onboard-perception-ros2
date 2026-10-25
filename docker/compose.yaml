@@ -1,0 +1,44 @@
+# The split deployment as three containers on one computer.
+#
+#   docker compose -f docker/compose.yaml up
+#
+# camera     camera + rectify (owns /dev/videoN when DEVICE is a real camera)
+# detector   the separately released module; shares the camera's IPC namespace, so it reads
+#            rectified frames in place from shared memory
+# tracking   tracker, telemetry bridge (UDP to the ground station), health
+#
+# compose.isolated.yaml gives the detector its own IPC namespace: it then cannot see the segment,
+# falls back to the raw topic by itself, and says so in its log and diagnostics.
+x-opr: &opr
+  image: onboard-perception-ros2:latest
+  network_mode: host
+  environment:
+    ROS_DOMAIN_ID: "42"
+    # DDS carries only small messages here; images go through opr's shared memory. Keeping Fast DDS
+    # on UDP avoids its own shared-memory transport, which fails silently between containers that
+    # share the host network but not /dev/shm.
+    FASTDDS_BUILTIN_TRANSPORTS: UDPv4
+
+services:
+  camera:
+    <<: *opr
+    ipc: shareable
+    # devices: ["/dev/video0:/dev/video0"]   # with DEVICE=/dev/video0
+    command: >
+      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=camera
+      device:=${DEVICE:-sim://swarm?pace_hz=30&loop=1&stamps=clock}
+
+  detector:
+    <<: *opr
+    ipc: "service:camera"
+    depends_on: [camera]
+    command: >
+      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=detector
+      detector_zero_copy:=true
+
+  tracking:
+    <<: *opr
+    volumes: ["${OUT_DIR:-./out}:/out"]
+    command: >
+      ros2 launch opr_pipeline pipeline.launch.py mode:=split role:=tracking
+      record_path:=/out/telemetry.hex

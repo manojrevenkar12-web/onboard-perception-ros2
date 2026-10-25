@@ -1,0 +1,13 @@
+{
+  "flights_per_scenario": 3,
+  "scenarios": {
+    "crossing": {"target_frames": 758, "recall": 0.9842, "track_frames": 801, "ghost_frames": 55, "id_switches": 0, "error_px_mean": 0.0529, "error_px_p95": 0.1093, "confirm_delay_frames_mean": 2.0000},
+    "fast": {"target_frames": 483, "recall": 0.9752, "track_frames": 489, "ghost_frames": 18, "id_switches": 0, "error_px_mean": 0.0659, "error_px_p95": 0.1236, "confirm_delay_frames_mean": 2.0000},
+    "clutter": {"target_frames": 1350, "recall": 0.9867, "track_frames": 1332, "ghost_frames": 0, "id_switches": 0, "error_px_mean": 0.0791, "error_px_p95": 0.2330, "confirm_delay_frames_mean": 2.0000},
+    "exposure": {"target_frames": 1350, "recall": 0.9867, "track_frames": 1332, "ghost_frames": 0, "id_switches": 0, "error_px_mean": 0.0489, "error_px_p95": 0.1012, "confirm_delay_frames_mean": 2.0000},
+    "occlusion": {"target_frames": 867, "recall": 0.9792, "track_frames": 873, "ghost_frames": 24, "id_switches": 3, "error_px_mean": 0.0566, "error_px_p95": 0.1213, "confirm_delay_frames_mean": 2.0000},
+    "swarm": {"target_frames": 3367, "recall": 0.9638, "track_frames": 3379, "ghost_frames": 134, "id_switches": 17, "error_px_mean": 0.0675, "error_px_p95": 0.1125, "confirm_delay_frames_mean": 2.0000},
+    "edge": {"target_frames": 476, "recall": 0.9622, "track_frames": 519, "ghost_frames": 61, "id_switches": 0, "error_px_mean": 0.0552, "error_px_p95": 0.1147, "confirm_delay_frames_mean": 2.0000},
+    "all": {"target_frames": 8651, "recall": 0.9748, "track_frames": 8725, "ghost_frames": 292, "id_switches": 20, "error_px_mean": 0.0632, "error_px_p95": 0.1180, "confirm_delay_frames_mean": 2.0000}
+  }
+}

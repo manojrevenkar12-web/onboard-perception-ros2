@@ -1,0 +1,4 @@
+# Override: the detector in its own IPC namespace (what an integrator gets by default).
+services:
+  detector:
+    ipc: private

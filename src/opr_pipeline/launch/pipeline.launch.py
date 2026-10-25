@@ -2,7 +2,7 @@
 
 mode:=composed  one process, every node in one container with intra-process communication:
                 images move between nodes as pointers, never serialised.
-mode:=split     the deployment Stark-style systems actually run: the camera and rectification in
+mode:=split     how a vehicle with separately released modules runs it: camera and rectification in
                 one container, the detector in its own process (as a separately released or
                 third-party module would be, typically in its own Docker container), tracking and
                 telemetry in a third. Images cross process boundaries through the shm transport;
@@ -70,8 +70,8 @@ def _setup(context):
         ]
     if mode != "split":
         raise RuntimeError("mode must be composed or split, got " + mode)
-    return [
-        ComposableNodeContainer(
+    groups = {
+        "camera": ComposableNodeContainer(
             name="camera_container",
             namespace="",
             package="rclcpp_components",
@@ -82,14 +82,14 @@ def _setup(context):
             ],
             output="screen",
         ),
-        Node(
+        "detector": Node(
             package=PKG,
             executable="detector_node",
             name="detector",
             parameters=[params, common, {"transport": detector_transport, "zero_copy": zero_copy}],
             output="screen",
         ),
-        ComposableNodeContainer(
+        "tracking": ComposableNodeContainer(
             name="tracking_container",
             namespace="",
             package="rclcpp_components",
@@ -101,7 +101,13 @@ def _setup(context):
             ],
             output="screen",
         ),
-    ]
+    }
+    role = get("role")
+    if role == "all":
+        return list(groups.values())
+    if role not in groups:
+        raise RuntimeError("role must be all, camera, detector or tracking, got " + role)
+    return [groups[role]]
 
 
 def generate_launch_description():
@@ -120,6 +126,11 @@ def generate_launch_description():
                 description="/dev/videoN, or sim://<scenario>?... for the simulated camera",
             ),
             DeclareLaunchArgument("image_qos", default_value="sensor", description="sensor | reliable"),
+            DeclareLaunchArgument(
+                "role",
+                default_value="all",
+                description="split mode: all, or one of camera | detector | tracking (one per container)",
+            ),
             DeclareLaunchArgument("detector_transport", default_value="shm", description="split mode: raw | shm"),
             DeclareLaunchArgument("detector_zero_copy", default_value="false"),
             DeclareLaunchArgument("udp_host", default_value="127.0.0.1"),

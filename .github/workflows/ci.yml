@@ -32,7 +32,13 @@ jobs:
       - name: Test (unit, ROS 2 integration, launch drills)
         run: |
           source install/setup.bash
-          colcon test --event-handlers console_cohesion+ --return-code-on-test-failure
+          set +e
+          colcon test --event-handlers console_cohesion+ --return-code-on-test-failure > test.log 2>&1
+          status=$?
+          cat test.log
+          colcon test-result --verbose > results.log 2>&1
+          cat results.log >> test.log
+          .github/scripts/annotate.sh tests results.log $status 80
       - name: Test results
         if: always()
         run: |
@@ -72,16 +78,20 @@ jobs:
           platforms: arm64
       - name: Core and equivalence tests under arm64 emulation
         run: |
+          set +e
           docker run --rm --platform linux/arm64 -v "$PWD:/src" -w /src ubuntu:24.04 bash -euo pipefail -c '
             apt-get update -qq
-            apt-get install -y -qq --no-install-recommends g++ cmake ninja-build libgtest-dev >/dev/null
-            uname -m
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends g++ cmake ninja-build libgtest-dev >/dev/null
+            echo "machine: $(uname -m)"
             cmake -S src/opr_sim -B /b/sim -G Ninja >/dev/null && cmake --build /b/sim >/dev/null
             cmake --install /b/sim --prefix /p >/dev/null
             /b/sim/test_scene
             cmake -S src/opr_core -B /b/core -G Ninja -DCMAKE_PREFIX_PATH=/p >/dev/null && cmake --build /b/core >/dev/null
             /b/core/test_equivalence --gtest_brief=1
-          '
+          ' > arm64.log 2>&1
+          status=$?
+          cat arm64.log
+          .github/scripts/annotate.sh arm64 arm64.log $status
 
   containers:
     name: three containers, shared memory and fallback
@@ -96,24 +106,29 @@ jobs:
           export OUT_DIR="$PWD/out"
           docker compose -f docker/compose.yaml up -d
           sleep 40
-          docker compose -f docker/compose.yaml logs detector > detector.log
+          docker compose -f docker/compose.yaml logs > shared.log 2>&1
           docker compose -f docker/compose.yaml down
-          cat detector.log
-          grep -q "reading image_rect in place" detector.log
-          ! grep -q "falling back" detector.log
-          lines=$(wc -l < out/telemetry.hex)
-          echo "telemetry datagrams: $lines"
-          test "$lines" -gt 300
+          cat shared.log
+          status=0
+          grep -q "reading image_rect in place" shared.log || { echo "detector did not read in place" >> shared.log; status=1; }
+          if grep -q "falling back" shared.log; then echo "detector fell back with shared IPC" >> shared.log; status=1; fi
+          lines=$(wc -l < out/telemetry.hex 2>/dev/null || echo 0)
+          echo "telemetry datagrams: $lines" >> shared.log
+          [ "$lines" -gt 300 ] || status=1
+          .github/scripts/annotate.sh shared-ipc shared.log $status 80
       - name: Isolated IPC - detector falls back to raw by itself
+        if: always()
         run: |
-          rm -f out/telemetry.hex
+          mkdir -p out && chmod 777 out && rm -f out/telemetry.hex
           export OUT_DIR="$PWD/out"
           docker compose -f docker/compose.yaml -f docker/compose.isolated.yaml up -d
           sleep 40
-          docker compose -f docker/compose.yaml logs detector > detector.log
+          docker compose -f docker/compose.yaml logs > isolated.log 2>&1
           docker compose -f docker/compose.yaml down
-          cat detector.log
-          grep -q "falling back to raw" detector.log
-          lines=$(wc -l < out/telemetry.hex)
-          echo "telemetry datagrams: $lines"
-          test "$lines" -gt 300
+          cat isolated.log
+          status=0
+          grep -q "falling back to raw" isolated.log || { echo "detector did not fall back" >> isolated.log; status=1; }
+          lines=$(wc -l < out/telemetry.hex 2>/dev/null || echo 0)
+          echo "telemetry datagrams: $lines" >> isolated.log
+          [ "$lines" -gt 300 ] || status=1
+          .github/scripts/annotate.sh isolated-ipc isolated.log $status 80

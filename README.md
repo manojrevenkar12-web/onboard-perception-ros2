@@ -105,7 +105,28 @@ What this says:
 
 ### The whole chain, camera to telemetry
 
-PIPELINE_TABLE
+Full table: [reports/benchmarks/pipeline.md](reports/benchmarks/pipeline.md). Simulated
+640x480 camera at 30 Hz with 8 targets, 20 s per run, all the way to the telemetry bridge:
+
+| Deployment | No limit: p50 / p99, CPU per frame | One core: p50 / p99, CPU per frame |
+|---|---|---|
+| one process, intra-process | 3.8 / 8.6 ms, 8.2 ms | 6.6 / 10.2 ms, 10.3 ms |
+| 3 processes, raw images | 4.1 / 7.9 ms, 7.9 ms | 4.5 / 7.3 ms, 7.9 ms |
+| 3 processes, shm + copy | 4.1 / 7.5 ms, 7.8 ms | 3.8 / 9.2 ms, 7.4 ms |
+| 3 processes, shm in place | 4.0 / 8.1 ms, 7.7 ms | 3.9 / 8.1 ms, 7.2 ms |
+
+Every deployment tracked every frame, give or take the one frame at the edge of the
+measurement window.
+
+- **At this camera's resolution, the deployment barely matters.** All of them use under a
+  third of a frame period. CPU includes about 3 ms per frame for rendering the simulated camera.
+- **Composition was not free on one core.** The composed container uses a multi-threaded
+  executor, which competes with itself on a single core: its latency rose to 6.6 ms, while the
+  split deployments stayed near 4 ms. On a busy companion computer, measure before assuming that
+  composition is the fast option.
+- **Shared memory matters at camera resolution, not at this one.** Shared memory in place was
+  the cheapest split deployment, but the large win is at 1080p (the table above), where raw
+  transport stops delivering frames at all.
 
 ### The camera driver, under faults
 
